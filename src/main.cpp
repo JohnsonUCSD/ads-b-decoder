@@ -12,11 +12,19 @@ int main() {
     std::vector<double> magnitudes = computeMagnitudes(raw);
     std::cout << "Computed " << magnitudes.size() << " magnitude samples\n";
 
-    std::ofstream out("magnitudes.txt");
-    for (double m : magnitudes) {
-        out << m << "\n";
-    }
+    // std::ofstream out("magnitudes.txt");
+    // for (double m : magnitudes) {
+    //     out << m << "\n";
+    // }
 
-    std::cout << "Wrote magnitudes.txt\n";
+    std::vector<size_t> preambles = detectPreamble(magnitudes);
+
+    std::ofstream out("preambles.txt");
+    for (double p : preambles) {
+        out << p << "\n";
+    }
+    std::cout << "Found " << preambles.size() << " candidates\n";
+
+    std::cout << "done\n";
     return 0;
 }

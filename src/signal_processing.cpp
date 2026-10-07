@@ -13,3 +13,44 @@ std::vector<double> computeMagnitudes(const std::vector<uint8_t>& raw) {
 
     return magnitudes;
 }
+
+std::vector<size_t> detectPreamble(const std::vector<double>& magnitudes) {
+    std::vector<size_t> preambles;
+
+    // compute score at every index and store them 
+    std::vector<double> scores(magnitudes.size() - 234);
+    double pulse_sum = 0;
+    double non_pulse_sum = 0;
+    for (size_t i = 0; i < magnitudes.size() - 234; i++) {
+        // indices 0, 2, 7, 9 is the preamble pulse positions
+        pulse_sum = magnitudes[i] + magnitudes[i+2] + magnitudes[i+7] + magnitudes[i+9];
+        non_pulse_sum = magnitudes[i+1] + magnitudes[i+3] + magnitudes[i+4] + magnitudes[i+5] + magnitudes[i+6] + 
+                        magnitudes[i+8] + magnitudes[i+10] + magnitudes[i+11] + magnitudes[i+12] + magnitudes[i+13] + magnitudes[i+14] + magnitudes[i+15];
+        scores[i] = pulse_sum - (non_pulse_sum / 3);
+    }
+
+    // mean 
+    double sum = 0;
+    for (double s: scores) {
+        sum += s;
+    }
+    double mean = sum / scores.size();
+
+    // standard deviation
+    double total = 0;
+    for (double s: scores) {
+        total += (s - mean) * (s - mean);
+    }
+    double stddev = std::sqrt(total / scores.size());
+
+    double threshold = mean + (5 * stddev);
+
+    for (size_t i = 0; i < scores.size(); i++) {
+        if (scores[i] > threshold) {
+            preambles.push_back(i);
+            i += 240;
+        }
+    }
+
+    return preambles;
+}
