@@ -25,6 +25,13 @@ int main() {
     }
     std::cout << "Found " << preambles.size() << " candidates\n";
 
+    std::vector<uint8_t> packet = demodulateBits(magnitudes, 43474);
+    for (uint8_t bit : packet) {
+        std::cout << static_cast<int>(bit) << " ";
+    }
+    std::cout << "\n";
+
+
     std::cout << "done\n";
     return 0;
 }
