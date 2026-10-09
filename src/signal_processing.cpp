@@ -55,16 +55,23 @@ std::vector<size_t> detectPreamble(const std::vector<double>& magnitudes) {
     return preambles;
 }
 
-std::vector<uint8_t> demodulateBits(const std::vector<double>& magnitudes, size_t preamble_idx) {
-    std::vector<uint8_t> packet;
+std::vector<uint8_t> demodulateMessage(const std::vector<double>& magnitudes, size_t preamble_idx) {
+    std::vector<uint8_t> packet(14, 0);
+
+    uint8_t current_byte = 0;
+    uint8_t bits_in_byte = 0;
 
     size_t start_idx = preamble_idx + 16;
     for (size_t i = start_idx; i < start_idx + 224; i+=2) {
-        if (magnitudes[i] > magnitudes[i+1]) {
-            packet.push_back(1);
-        }
-        else {
-            packet.push_back(0);
+
+        packet[current_byte] = packet[current_byte] << 1;
+        packet[current_byte] += magnitudes[i] > magnitudes[i+1];
+
+        bits_in_byte += 1;
+
+        if (bits_in_byte == 8) {
+            current_byte +=1;
+            bits_in_byte = 0;
         }
     }
     

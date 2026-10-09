@@ -5,6 +5,8 @@
 #include <fstream>
 #include <vector>
 
+#include <cstdio>
+
 int main() {
     std::vector<uint8_t> raw = readRawFile("tests/modes1.bin");
     std::cout << "Read " << raw.size() << " bytes\n";
@@ -25,10 +27,10 @@ int main() {
     }
     std::cout << "Found " << preambles.size() << " candidates\n";
 
-    std::vector<uint8_t> packet = demodulateBits(magnitudes, 43474);
-    for (uint8_t bit : packet) {
-        std::cout << static_cast<int>(bit) << " ";
-    }
+    std::vector<uint8_t> packet = demodulateMessage(magnitudes, 43474);
+for (uint8_t byte : packet) {
+    std::printf("%02X", byte);
+}
     std::cout << "\n";
 
 
