@@ -26,7 +26,7 @@ std::vector<size_t> detectPreamble(const std::vector<double>& magnitudes) {
         pulse_sum = magnitudes[i] + magnitudes[i+2] + magnitudes[i+7] + magnitudes[i+9];
         non_pulse_sum = magnitudes[i+1] + magnitudes[i+3] + magnitudes[i+4] + magnitudes[i+5] + magnitudes[i+6] + 
                         magnitudes[i+8] + magnitudes[i+10] + magnitudes[i+11] + magnitudes[i+12] + magnitudes[i+13] + magnitudes[i+14] + magnitudes[i+15];
-        scores[i] = pulse_sum - (non_pulse_sum / 3);
+        scores[i] = (pulse_sum*0.75) - (non_pulse_sum*0.25);
     }
 
     // mean 
