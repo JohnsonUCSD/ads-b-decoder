@@ -1,6 +1,7 @@
 #include "file_reader.h"
 #include "signal_processing.h"
 #include "crc.h"
+#include "decode.h"
 
 #include <iostream>
 #include <fstream>
@@ -35,7 +36,7 @@ int main() {
     }
     std::cout << "\n";
 
-    std::cout << "CRC Check on 43474: " << checkCRC(packet) << "\n";
+    std::cout << "CRC Check on 43474: " << checkCRC(packet) << std::endl;
 
 
     std::vector<uint8_t> message;
@@ -56,6 +57,13 @@ int main() {
     // std::cout << crc_total << "CRC Pass, " << preambles.size() - crc_total <<" CRC Fail out of" <<  <<"\n";
     std::printf("%zu CRC Pass, %zu CRC Fail out of %zu candidates\n", crc_total, preambles.size() - crc_total, preambles.size());
 
+
+    std::vector<uint8_t> packet_amc = demodulateMessage(magnitudes, 120675);
+
+    std::cout << checkCRC(packet_amc) << std::endl;
+    AdsbMessage AMC421 = decode(packet_amc);
+
+    std::cout << *AMC421.callsign << std::endl;
 
     std::cout << "done\n";
     
