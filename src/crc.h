@@ -1,4 +1,5 @@
 #include <vector>
+#include <array>
 #include <cstdint>
 
-bool checkCRC(const std::vector<uint8_t>& message);
+bool checkCRC(const std::array<uint8_t, 14>& message);

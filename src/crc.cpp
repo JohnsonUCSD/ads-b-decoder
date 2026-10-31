@@ -1,6 +1,6 @@
 #include "crc.h"
 
-bool checkCRC(const std::vector<uint8_t>& message) {
+bool checkCRC(const std::array<uint8_t, 14>& message) {
     const uint32_t GENERATOR = 0x1FFF409;
 
     // valid messages are 14 bytes

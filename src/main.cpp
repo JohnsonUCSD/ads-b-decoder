@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <array>
 
 #include <cstdio>
 #include <iomanip>
@@ -30,7 +31,7 @@ int main() {
     // }
     std::cout << "Found " << preambles.size() << " candidates\n";
 
-    std::vector<uint8_t> packet = demodulateMessage(magnitudes, 43474);
+    std::array<uint8_t, 14> packet = demodulateMessage(magnitudes, 43474);
     for (uint8_t byte : packet) {
         std::printf("%02X", byte);
     }
@@ -39,7 +40,7 @@ int main() {
     std::cout << "CRC Check on 43474: " << checkCRC(packet) << std::endl;
 
 
-    std::vector<uint8_t> message;
+    std::array<uint8_t, 14> message;
     size_t crc_total = 0;
     std::ofstream outs("crc_checked.txt");
     for (size_t p : preambles) {
@@ -58,12 +59,12 @@ int main() {
     std::printf("%zu CRC Pass, %zu CRC Fail out of %zu candidates\n", crc_total, preambles.size() - crc_total, preambles.size());
 
 
-    std::vector<uint8_t> packet_amc = demodulateMessage(magnitudes, 120675);
+    std::array<uint8_t, 14> packet_amc = demodulateMessage(magnitudes, 120675);
 
     std::cout << checkCRC(packet_amc) << std::endl;
     AdsbMessage AMC421 = decode(packet_amc);
 
-    std::cout << *AMC421.callsign << std::endl;
+    std::cout << std::get<Identification>(AMC421.payload).callsign << std::endl;
 
     std::cout << "done\n";
     

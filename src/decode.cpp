@@ -2,7 +2,7 @@
 
 const char ADSB_CHARSET[] = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
 
-AdsbMessage decode(const std::vector<uint8_t>& packet) {
+AdsbMessage decode(const std::array<uint8_t, 14>& packet) {
     AdsbMessage result;
 
     if (packet.size() != 14) {
@@ -27,7 +27,8 @@ AdsbMessage decode(const std::vector<uint8_t>& packet) {
 
     // Aircraft identification
     if (result.tc >= 1 && result.tc <= 4) {
-        result.category = packet[4] & 0x07;
+        Identification ident;
+        ident.category = packet[4] & 0x07;
 
         uint8_t index = 0;
         std::string callsign;
@@ -42,7 +43,9 @@ AdsbMessage decode(const std::vector<uint8_t>& packet) {
             index = (message >> (6 * (7 - i))) & 0x3f;
             callsign += ADSB_CHARSET[index];
         }
-        result.callsign = callsign;
+        ident.callsign = callsign;
+
+        result.payload = ident;
     }
     // Surface position
     else if (result.tc >= 5 && result.tc <= 8) { 
@@ -50,11 +53,37 @@ AdsbMessage decode(const std::vector<uint8_t>& packet) {
     } 
     // Airborne position (w/Baro Altitude)
     else if (result.tc >= 9 && result.tc <= 18) {
-        // do next
+        AirbornePosition airpos;
+
+        uint16_t alt12 =    static_cast<uint32_t>(packet[5]) << 4 |
+                            static_cast<uint32_t>(packet[6] >> 4);
+        bool q_bit = (alt12 >> 4) & 0x1;
+        if (q_bit) {
+            // remove q_bit
+             uint16_t altitude = ((alt12 & 0xfe0) >> 1) | (alt12 & 0xf);
+             airpos.altitude = (altitude * 25) - 1000;
+        }
+        else {
+            // alternative encoding with 100 feet increments (do later cause can't find sec:alt_code)
+        }
+
+        airpos.cpr_format = (packet[6] >> 2) & 0x1;
+        airpos.lat_cpr =    static_cast<uint32_t>(packet[6] & 0x3) << 15 | 
+                            static_cast<uint32_t>(packet[7]) << 7 | 
+                            static_cast<uint32_t>((packet[8] >> 1) & 0x7f);
+
+        airpos.lon_cpr =    static_cast<uint32_t>(packet[8] & 0x1) << 16 | 
+                            static_cast<uint32_t>(packet[9]) << 8 | 
+                            static_cast<uint32_t>(packet[10]);
+
+        result.payload = airpos;
     }
     // Airborne velocities
     else if (result.tc == 19) {
-
+        AirborneVelocity airvelo;
+        airvelo.subtype = (packet[4] & 0x7);
+        airvelo.vr_sign = (packet[8] >> 3) & 0x1;
+        // airvelo.vertical_rate = (packet[8] & 0x7) | 
     }
     // Airborne position (w/GNSS Height)
     else if (result.tc >= 20 && result.tc <= 22) {

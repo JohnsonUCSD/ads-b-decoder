@@ -1,8 +1,33 @@
 #include <vector>
 #include <cstdint>
 #include <string>
+#include <array>
 
+#include<variant>
 #include <optional>
+
+// Aircraft identification (tc 1-4)
+struct Identification {
+    uint8_t category;
+    std::string callsign;
+};
+
+// Airborne position (tc 9-18)
+struct AirbornePosition {
+    int altitude;           // 
+    bool cpr_format;        // 0 = even frame, 1 = odd frame
+    uint32_t lat_cpr;
+    uint32_t lon_cpr;    
+};
+
+// Airborne velocities (tc 19)
+struct AirborneVelocity {
+    uint8_t subtype;
+    bool source_vr;     // 0 = GNSS, 1 = Barometer
+    bool vr_sign;       // 0 = up, 1 = down
+    int vertical_rate;
+
+};
 
 struct AdsbMessage {
     uint8_t df = 0;     // Downlink Format (bits 1-5)
@@ -10,17 +35,7 @@ struct AdsbMessage {
     uint32_t icao = 0;  // ICAO address (bits 9-32)
     uint8_t tc = 0;     // Type code (bits 33-37)
 
-    // Aircraft identification (TC 1-4)
-    std::optional<uint8_t> category;
-    std::optional<std::string> callsign; 
-
-    // Airborne Position (TC 9-8 and 20-22)
-    std::optional<int> altitude;            // in feet
-    std::optional<bool> format_flag;        // true = odd frame, false = even frame
-    std::optional<bool> time_flag           // 
-    std::optional<uint32_t> lat_cpr;
-    std::optional<uint32_t> lon_cpr;
-
+    std::variant<std::monostate, Identification, AirbornePosition> payload;
 };
 
-AdsbMessage decode(const std::vector<uint8_t>& message);
+AdsbMessage decode(const std::array<uint8_t, 14>& message);
