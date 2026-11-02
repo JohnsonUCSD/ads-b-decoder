@@ -2,6 +2,16 @@
 
 const char ADSB_CHARSET[] = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
 
+uint32_t getBits(const std::array<uint8_t, 14>& packet, size_t start, size_t length) {
+    uint32_t value = 0;
+
+    for (size_t i = start; i < start + length; i++) {
+        value = (value << 1) | ((packet[i / 8] >> (7 - i % 8)) & 0x1);
+    }
+
+    return value;
+}
+
 AdsbMessage decode(const std::array<uint8_t, 14>& packet) {
     AdsbMessage result;
 
@@ -81,9 +91,83 @@ AdsbMessage decode(const std::array<uint8_t, 14>& packet) {
     // Airborne velocities
     else if (result.tc == 19) {
         AirborneVelocity airvelo;
-        airvelo.subtype = (packet[4] & 0x7);
-        airvelo.vr_sign = (packet[8] >> 3) & 0x1;
-        // airvelo.vertical_rate = (packet[8] & 0x7) | 
+        airvelo.subtype = getBits(packet, 37, 3);
+        // Ground speed decoding
+        if (airvelo.subtype == 1 || airvelo.subtype == 2) {
+            bool ew = getBits(packet, 45, 1);       // 0 = east, 1 = west
+            uint32_t ew_velo =  getBits(packet, 46, 10);
+            bool ns =  getBits(packet, 56, 1);      // 0 = north, 1 = south
+            uint32_t ns_velo =  getBits(packet, 57, 10);
+
+            // 0 means no information, so skip those
+            if (ew_velo != 0 && ns_velo != 0) {
+                int ew_speed;
+                int ns_speed;
+                // subsonic
+                if (airvelo.subtype == 1) {
+                    ew_speed = ew_velo - 1;
+                    ns_speed = ns_velo - 1;
+                }
+                // supersonic
+                else {
+                    ew_speed = 4*(ew_velo - 1);
+                    ns_speed = 4*(ns_velo - 1);
+                }
+                // applying negatives to ew and ns
+                if (ew == 1) {
+                    ew_speed = -ew_speed;
+                }
+                if (ns == 1) {
+                    ns_speed = -ns_speed;
+                }
+
+                airvelo.speed = std::sqrt((ew_speed*ew_speed) + (ns_speed*ns_speed));
+
+                double angle = std::fmod((std::atan2(ew_speed, ns_speed) * (360 / (2* std::numbers::pi))), 360);
+                if (angle < 0) {
+                    angle += 360.0;
+                }
+                airvelo.heading = angle;
+
+            }
+        }
+        else if (airvelo.subtype == 3 || airvelo.subtype == 4) {
+            bool maghead_status = getBits(packet, 45, 1);       // 0 = not available, 1 = available
+            uint16_t maghead = getBits(packet, 46, 10);
+            airvelo.airspeed_type = getBits(packet, 56, 1);               // 0 = Indicated airspeed (IAS), 1 = True airspeed (TAS)
+            uint16_t airspeed = getBits(packet, 57, 10);
+
+            if (maghead_status == 1) {
+                airvelo.heading = maghead * (360.0 / 1024.0);
+            }
+
+            // 0 means no information available
+            if (airspeed != 0) {
+                // subsonic
+                if (airvelo.subtype == 3) {
+                    airvelo.speed = airspeed - 1;
+                }
+                // supersonic
+                else {
+                    airvelo.speed = 4 * (airspeed - 1);
+                }
+            }
+        }
+
+        airvelo.vr_sign = getBits(packet, 68, 1);               // 0 = up, 1 = down
+        airvelo.source_vr = getBits(packet, 67, 1);             // 0 = GNSS, 1 = baro
+        uint16_t vertical_rate = getBits(packet, 69, 9);
+        // vertical rate of 0 means information not available, so skip
+        if (vertical_rate != 0) {
+            if (airvelo.vr_sign == 0){
+                airvelo.vertical_rate = 64 * (vertical_rate - 1);
+            }
+            else{
+                airvelo.vertical_rate = -64 * (vertical_rate - 1);
+            }
+        }
+
+        result.payload = airvelo;
     }
     // Airborne position (w/GNSS Height)
     else if (result.tc >= 20 && result.tc <= 22) {
