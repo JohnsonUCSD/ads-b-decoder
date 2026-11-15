@@ -20,11 +20,6 @@ An ADS-B (Mode S 1090 MHz) decoder in C++ that works from raw I/Q samples
 - Short messages (56-bit) such as DF11
 - Live input from RTL-SDR
 
-## Distant Future
-- Creating a quarter-wave ground plane antenna
-- PCB Antenna
-- Bandpass filter
-
 ## Build and Run
 In Progress of Changing
 

@@ -1,5 +1,6 @@
 CXX = g++
 CXXFLAGS = -std=c++20 -Wall -Wextra -g
+LDLIBS = -lrtlsdr
 
 TARGET = output
 TEST_TARGET = test_runner
@@ -10,7 +11,7 @@ TEST_SRC = tests/test_runner.cpp src/crc.cpp src/decode.cpp
 all: $(TARGET) $(TEST_TARGET)
 
 $(TARGET): $(SRC)
-	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
+	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET) $(LDLIBS)
 
 $(TEST_TARGET): $(TEST_SRC)
 	$(CXX) $(CXXFLAGS) -Isrc $(TEST_SRC) -o $(TEST_TARGET)
