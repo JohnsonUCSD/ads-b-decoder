@@ -1,6 +1,8 @@
 #include "signal_processing.h"
 #include <cmath>
 
+#include "decode.h"
+
 std::vector<double> computeMagnitudes(const std::vector<uint8_t>& raw) {
     std::vector<double> magnitudes;
     magnitudes.reserve(raw.size() / 2);
@@ -76,4 +78,161 @@ std::array<uint8_t, 14> demodulateMessage(const std::vector<double>& magnitudes,
     }
     
     return packet;
+}
+
+
+std::vector<double> applyPhaseCorrection_Gentile(const std::vector<double>& magnitudes, size_t preamble_idx, const std::array<uint8_t, 14>& packet) {
+
+    double on_time = magnitudes[preamble_idx] + magnitudes[preamble_idx+2] + magnitudes[preamble_idx+7] + magnitudes[preamble_idx+9];
+
+    size_t early_idx = (preamble_idx > 0) ? preamble_idx - 1 : 0;    // incase preamble_idx is 0
+    double early = 2 * (magnitudes[early_idx] + magnitudes[preamble_idx+6]);
+
+    double late = 2 * (magnitudes[preamble_idx+3] + magnitudes[preamble_idx+10]);
+
+    const double UNITY = 16384.0;
+
+    double alpha = 0.0;
+    double scale_up;
+    double scale_down;
+    bool leak_direction;    // 0 = backwards, 1 = forwards
+    if (early > late) {
+        if ((early + on_time) > 0) {
+            alpha = early / (early + on_time);
+        }
+        leak_direction = 0;
+    }
+    else {
+        if ((late + on_time) > 0) {
+            alpha = late / (late + on_time);
+        }
+        leak_direction = 1;
+    }
+    scale_up = UNITY + UNITY * alpha;
+    scale_down = UNITY - UNITY * alpha;
+
+    // extracting the magnitude values for this message
+    size_t data_start = preamble_idx + 16;
+    size_t n_data_samples = 112 * 2;
+    std::vector<double> corrected(magnitudes.begin() + data_start, magnitudes.begin() + data_start + n_data_samples);
+
+    for (size_t bit_idx = 0; bit_idx < 112; bit_idx++) {
+        for (size_t half = 0; half < 2; half++) {
+            size_t sample_idx = bit_idx * 2 + half;
+            if (sample_idx >= corrected.size()) {
+                break;
+            }
+
+            // Sampling is late, so energy leaks backwards
+            if (leak_direction == 0) {
+                if (half == 1) {
+                    if ((bit_idx < (112 - 1)) && (getBits(packet, bit_idx + 1, 1) == 1)) {
+                        corrected[sample_idx] = corrected[sample_idx] * scale_down / UNITY;
+                    }
+                    else {
+                        corrected[sample_idx] = corrected[sample_idx] * scale_up / UNITY;
+                    }
+                }
+                else {
+                    if ((bit_idx > 0) && (getBits(packet, bit_idx - 1, 1) == 0)) {
+                        corrected[sample_idx] = corrected[sample_idx] * scale_down / UNITY;
+                    }
+                    else {
+                        corrected[sample_idx] = corrected[sample_idx] * scale_up / UNITY;
+                    }
+                }
+            }
+            // Sampling is early, so energy leaks forward
+            else {
+                if (half == 0) {
+                    if ((bit_idx > 0) && (getBits(packet, bit_idx - 1, 1) == 0)) {
+                        corrected[sample_idx] = corrected[sample_idx] * scale_down / UNITY;
+                    }
+                    else {
+                        corrected[sample_idx] = corrected[sample_idx] * scale_up / UNITY;
+                    }
+                }
+                else {
+                    if (getBits(packet, bit_idx, 1) == 1) {
+                        corrected[sample_idx] = corrected[sample_idx] * scale_down / UNITY;
+                    }
+                    else {
+                        corrected[sample_idx] = corrected[sample_idx] * scale_up / UNITY;
+                    }
+                }
+            }
+        }
+    }
+
+    return corrected;
+}
+
+std::vector<double> applyPhaseCorrection_dump(const std::vector<double>& magnitudes, size_t preamble_idx, const std::array<uint8_t, 14>& packet) {
+
+    double on_time = magnitudes[preamble_idx] + magnitudes[preamble_idx+2] + magnitudes[preamble_idx+7] + magnitudes[preamble_idx+9];
+
+    size_t early_idx = (preamble_idx > 0) ? preamble_idx - 1 : 0;    // incase preamble_idx is 0
+    double early = 2 * (magnitudes[early_idx] + magnitudes[preamble_idx+6]);
+
+    double late = 2 * (magnitudes[preamble_idx+3] + magnitudes[preamble_idx+10]);
+
+    const double UNITY = 16384.0;
+
+    double alpha = 0.0;
+    double scale_up;
+    double scale_down;
+    bool leak_direction;    // 0 = backwards, 1 = forwards
+    if (early > late) {
+        if ((early + on_time) > 0) {
+            alpha = early / (early + on_time);
+        }
+        leak_direction = 0;
+    }
+    else {
+        if ((late + on_time) > 0) {
+            alpha = late / (late + on_time);
+        }
+        leak_direction = 1;
+    }
+    scale_up = UNITY + UNITY * alpha;
+    scale_down = UNITY - UNITY * alpha;
+
+    // extracting the magnitude values for this message
+    size_t data_start = preamble_idx + 16;
+    size_t n_data_samples = 112 * 2;
+    std::vector<double> corrected(magnitudes.begin() + data_start, magnitudes.begin() + data_start + n_data_samples);
+
+    for (size_t bit_idx = 0; bit_idx < 112; bit_idx++) {
+        for (size_t half = 0; half < 2; half++) {
+            size_t sample_idx = bit_idx * 2 + half;
+            if (sample_idx >= corrected.size()) {
+                break;
+            }
+
+            // Sampling is late, so energy leaks backwards
+            if (leak_direction == 0) {
+                if (half == 1) {
+                    if ((bit_idx < (112 - 1)) && (getBits(packet, bit_idx + 1, 1) == 1)) {
+                        corrected[sample_idx] = corrected[sample_idx] * scale_down / UNITY;
+                    }
+                    else {
+                        corrected[sample_idx] = corrected[sample_idx] * scale_up / UNITY;
+                    }
+                }
+            }
+            // Sampling is early, so energy leaks forward
+            else {
+                if (half == 0) {
+                    if ((bit_idx > 0) && (getBits(packet, bit_idx - 1, 1) == 0)) {
+                        corrected[sample_idx] = corrected[sample_idx] * scale_down / UNITY;
+                    }
+                    else {
+                        corrected[sample_idx] = corrected[sample_idx] * scale_up / UNITY;
+                    }
+                }
+            }
+        }
+    }
+
+    return corrected;
 }
