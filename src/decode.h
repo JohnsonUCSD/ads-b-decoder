@@ -48,5 +48,3 @@ struct AdsbMessage {
 };
 
 AdsbMessage decode(const std::array<uint8_t, 14>& message);
-
-uint32_t getBits(const std::array<uint8_t, 14>& packet, size_t start, size_t length);

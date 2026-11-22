@@ -1,16 +1,9 @@
 #include "decode.h"
 
+#include "bit_helper.h"
+
 const char ADSB_CHARSET[] = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
 
-uint32_t getBits(const std::array<uint8_t, 14>& packet, size_t start, size_t length) {
-    uint32_t value = 0;
-
-    for (size_t i = start; i < start + length; i++) {
-        value = (value << 1) | ((packet[i / 8] >> (7 - i % 8)) & 0x1);
-    }
-
-    return value;
-}
 
 AdsbMessage decode(const std::array<uint8_t, 14>& packet) {
     AdsbMessage result;

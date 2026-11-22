@@ -1,4 +1,5 @@
 #include "signal_processing.h"
+#include "bit_helper.h"
 #include <cmath>
 
 #include "decode.h"
@@ -50,7 +51,6 @@ std::vector<size_t> detectPreamble(const std::vector<double>& magnitudes) {
     for (size_t i = 0; i < scores.size(); i++) {
         if (scores[i] > threshold) {
             preambles.push_back(i);
-            i += 240;
         }
     }
 
@@ -235,4 +235,26 @@ std::vector<double> applyPhaseCorrection_dump(const std::vector<double>& magnitu
     }
 
     return corrected;
+}
+
+std::array<uint8_t, 14> demodulatePhaseCorrected(const std::vector<double>& magnitudes) {
+    std::array<uint8_t, 14> packet{};
+
+    uint8_t current_byte = 0;
+    uint8_t bits_in_byte = 0;
+
+    for (size_t i = 0; i < 224; i += 2) {
+
+        packet[current_byte] = packet[current_byte] << 1;
+        packet[current_byte] += magnitudes[i] > magnitudes[i+1];
+
+        bits_in_byte += 1;
+
+        if (bits_in_byte == 8) {
+            current_byte += 1;
+            bits_in_byte = 0;
+        }
+    }
+
+    return packet;
 }
