@@ -40,7 +40,33 @@ int runFile(const std::string& path) {
             outs << std::dec << "\n";
             crc_total++;
         }
+        else {
+            std::vector<double> corrected1 = applyPhaseCorrection_Gentile(magnitudes, p, message);
+            std::vector<double> corrected2 = applyPhaseCorrection_dump(magnitudes, p, message);
+
+            std::array<uint8_t, 14> corrected_msg1 = demodulatePhaseCorrected(corrected1);
+            std::array<uint8_t, 14> corrected_msg2 = demodulatePhaseCorrected(corrected2);
+
+            if (checkCRC(corrected_msg1)) {
+                std::cout << "Gentile Packet at " << p << ":\t";
+                for (uint8_t byte : message) {
+                    std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(byte);
+                }
+                std::cout << std::dec << "\n";
+
+            }
+            if (checkCRC(corrected_msg2)) {
+                std::cout << "Dump Packet at " << p << ":\t";
+                for (uint8_t byte : message) {
+                    std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(byte);
+                }
+                std::cout << std::dec << "\n";
+
+            }
+
+        }
     }
+    std::cout << crc_total << "/" << preambles.size() << std::endl;
 
     return 0;
 }
@@ -78,6 +104,8 @@ int runLive(){
         std::vector<size_t> preambles = detectPreamble(magnitudes);
 
 
+
+        // TODO: ADD PHASE CORRECTION 
         std::array<uint8_t, 14> message;
         for (size_t p : preambles) {
             message = demodulateMessage(magnitudes, p);
