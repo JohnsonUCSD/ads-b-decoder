@@ -1,8 +1,11 @@
 #pragma once
 #include <array>
-#include <cstddef>
 #include <cstdint>
 
+inline constexpr size_t SAMPLES_PER_BIT             = 2;
+inline constexpr size_t PREAMBLE_SAMPLES_LENGTH     = 16;
+inline constexpr size_t LONG_MSG_BIT_LENGTH         = 112;
+inline constexpr size_t SHORT_MSG_BIT_LENGTH        = 56;
 
 inline uint32_t getBits(const std::array<uint8_t, 14>& packet, size_t start, size_t length) {
     uint32_t value = 0;
@@ -36,5 +39,5 @@ inline uint8_t getDF(const std::array<uint8_t, 14>& packet) {
  * @return size_t The message length in bits: 112 for extended messages or 56 for short messages.
  */
 inline size_t getBitLength(const std::array<uint8_t, 14>& packet) {
-    return (packet[0] >> 7) ? 112 : 56;
+    return (packet[0] >> 7) ? LONG_MSG_BIT_LENGTH : SHORT_MSG_BIT_LENGTH;
 }

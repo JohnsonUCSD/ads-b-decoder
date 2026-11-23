@@ -1,5 +1,5 @@
 #include "signal_processing.h"
-#include "bit_helper.h"
+#include "bits.h"
 #include <cmath>
 
 #include "decode.h"
@@ -60,11 +60,17 @@ std::vector<size_t> detectPreamble(const std::vector<double>& magnitudes) {
 std::array<uint8_t, 14> demodulateMessage(const std::vector<double>& magnitudes, size_t preamble_idx) {
     std::array<uint8_t, 14> packet{};
 
+    size_t start_idx = preamble_idx + PREAMBLE_SAMPLES_LENGTH;
+
+    // Checking first bit to see if DF < 16 (short, 56 bit message), or DF >= 16 (long, 224 bit message)
+    bool is_long = magnitudes[start_idx] > magnitudes[start_idx + 1];
+    size_t n_bits = is_long ? LONG_MSG_BIT_LENGTH : SHORT_MSG_BIT_LENGTH;
+    size_t end_idx = start_idx + SAMPLES_PER_BIT * n_bits; 
+
     uint8_t current_byte = 0;
     uint8_t bits_in_byte = 0;
 
-    size_t start_idx = preamble_idx + 16;
-    for (size_t i = start_idx; i < start_idx + 224; i+=2) {
+    for (size_t i = start_idx; i < end_idx; i+=SAMPLES_PER_BIT) {
 
         packet[current_byte] = packet[current_byte] << 1;
         packet[current_byte] += magnitudes[i] > magnitudes[i+1];

@@ -1,6 +1,6 @@
 #include "decode.h"
 
-#include "bit_helper.h"
+#include "bits.h"
 
 const char ADSB_CHARSET[] = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
 
