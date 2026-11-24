@@ -2,6 +2,7 @@
 #include "signal_processing.h"
 #include "crc.h"
 #include "decode.h"
+#include "bits.h"
 
 #include <iostream>
 #include <fstream>
@@ -21,21 +22,22 @@ void onSigint(int) { g_running = 0; }
 
 int runFile(const std::string& path) {
     std::vector<uint8_t> raw = readRawFile(path);
-
     std::vector<double> magnitudes = computeMagnitudes(raw);
 
-    std::vector<size_t> preambles = detectPreamble(magnitudes);
+    // std::vector<size_t> preambles = detectPreamble(magnitudes);
+    std::vector<size_t> preambles = detectPreambleShape(magnitudes);
 
     std::array<uint8_t, 14> message;
+    std::unordered_set<uint32_t> known_icaos;
     size_t crc_total = 0;
     std::ofstream outs("crc_checked.txt");
     for (size_t p : preambles) {
         message = demodulateMessage(magnitudes, p);
-        if (checkCRC(message)) {
+        if (checkCRC(message, known_icaos)) {
 
             outs << "Packet at " << p << ":\t";
-            for (uint8_t byte : message) {
-                outs << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(byte);
+            for (size_t i = 0; i < getBitLength(message) / 8; i++) {
+                outs << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(message[i]);
             }
             outs << std::dec << "\n";
             crc_total++;
@@ -47,18 +49,18 @@ int runFile(const std::string& path) {
             std::array<uint8_t, 14> corrected_msg1 = demodulatePhaseCorrected(corrected1);
             std::array<uint8_t, 14> corrected_msg2 = demodulatePhaseCorrected(corrected2);
 
-            if (checkCRC(corrected_msg1)) {
+            if (checkCRC(corrected_msg1, known_icaos)) {
                 std::cout << "Gentile Packet at " << p << ":\t";
-                for (uint8_t byte : message) {
-                    std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(byte);
+                for (size_t i = 0; i < getBitLength(corrected_msg1) / 8; i++) {
+                    std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(corrected_msg1[i]);
                 }
                 std::cout << std::dec << "\n";
 
             }
-            if (checkCRC(corrected_msg2)) {
+            if (checkCRC(corrected_msg2, known_icaos)) {
                 std::cout << "Dump Packet at " << p << ":\t";
-                for (uint8_t byte : message) {
-                    std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(byte);
+                for (size_t i = 0; i < getBitLength(corrected_msg2) / 8; i++) {
+                    std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(corrected_msg2[i]);
                 }
                 std::cout << std::dec << "\n";
 
@@ -67,6 +69,13 @@ int runFile(const std::string& path) {
         }
     }
     std::cout << crc_total << "/" << preambles.size() << std::endl;
+
+    std::cout << "Known ICAOs (" << known_icaos.size() << "):\n";
+    for (uint32_t icao : known_icaos) {
+        std::cout << std::hex << std::uppercase << std::setfill('0') << std::setw(6) << icao << "\n";
+    }
+    std::cout << std::dec << std::nouppercase;
+
 
     return 0;
 }
@@ -93,6 +102,8 @@ int runLive(){
 
     std::cerr << "waiting for first read...\n";
 
+    std::unordered_set<uint32_t> known_icaos;
+
     while (g_running) {
         int n_read = 0;
         if (rtlsdr_read_sync(dev, buf.data(), static_cast<int>(buf.size()), &n_read) != 0) {
@@ -107,9 +118,10 @@ int runLive(){
 
         // TODO: ADD PHASE CORRECTION 
         std::array<uint8_t, 14> message;
+        
         for (size_t p : preambles) {
             message = demodulateMessage(magnitudes, p);
-            if (checkCRC(message)) {
+            if (checkCRC(message, known_icaos)) {
                 for (uint8_t byte : message) {
                     std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(byte);
                 }

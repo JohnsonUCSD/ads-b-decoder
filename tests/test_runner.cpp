@@ -18,23 +18,27 @@ std::array<uint8_t, 14> fromHex(const std::string& hex) {
 
 TEST_CASE("CRC Parity Validation") {
 
+    std::unordered_set<uint32_t> known_icaos;
+
     // No bit error
     auto packet1 = fromHex("8F4D20235877A0BBBF997CDB827B");
-    CHECK(checkCRC(packet1) == true);
+    CHECK(checkCRC(packet1, known_icaos) == true);
 
     // 1 Bit error
     auto packet2 = fromHex("8F4D20235877A0BCBF997CDB827B"); 
-    CHECK(checkCRC(packet2) == false);
+    CHECK(checkCRC(packet2, known_icaos) == false);
 
 }
 
 TEST_CASE("Airborne Position Messages (TC 9-18)") {
 
+    std::unordered_set<uint32_t> known_icaos;
+
     auto packet = fromHex("8F4D20235877A0BBBF997CDB827B");
 
     AdsbMessage msg = decode(packet);
 
-    CHECK(checkCRC(packet) == true); 
+    CHECK(checkCRC(packet, known_icaos) == true); 
     
     CHECK(msg.df == 17);
     CHECK(msg.ca == 7);

@@ -17,6 +17,51 @@ std::vector<double> computeMagnitudes(const std::vector<uint8_t>& raw) {
     return magnitudes;
 }
 
+
+static bool looksLikePreamble(const std::vector<double>& magnitudes, size_t idx) {
+
+    // Gotten from dump1090
+    if (!(magnitudes[idx]   > magnitudes[idx+1] &&
+          magnitudes[idx+1] < magnitudes[idx+2] &&
+          magnitudes[idx+2] > magnitudes[idx+3] &&
+          magnitudes[idx+3] < magnitudes[idx]   &&
+          magnitudes[idx+4] < magnitudes[idx]   &&
+          magnitudes[idx+5] < magnitudes[idx]   &&
+          magnitudes[idx+6] < magnitudes[idx]   &&
+          magnitudes[idx+7] > magnitudes[idx+8] &&
+          magnitudes[idx+8] < magnitudes[idx+9] &&
+          magnitudes[idx+9] > magnitudes[idx+6])) {
+        return false;
+    }
+
+    // Non-pulses must sit below this threshold
+    double high = (magnitudes[idx] + magnitudes[idx+2] + magnitudes[idx+7] + magnitudes[idx+9]) / 6;
+
+    // middle of the gap between the two pulse pairs
+    if (magnitudes[idx+4] >= high || magnitudes[idx+5] >= high) {
+        return false;
+    }
+
+    // quiet parts just before the data bits start
+    if (magnitudes[idx+11] >= high || magnitudes[idx+12] >= high || magnitudes[idx+13] >= high || magnitudes[idx+14] >= high) {
+        return false;
+    }
+
+    return true;
+}
+
+std::vector<size_t> detectPreambleShape(const std::vector<double>& magnitudes) {
+    std::vector<size_t> preambles;
+
+    for (size_t idx = 0; idx + 240 <= magnitudes.size(); idx++) {
+        if (looksLikePreamble(magnitudes, idx)) {
+            preambles.push_back(idx);
+        }
+    }
+
+    return preambles;
+}
+
 std::vector<size_t> detectPreamble(const std::vector<double>& magnitudes) {
     std::vector<size_t> preambles;
 
