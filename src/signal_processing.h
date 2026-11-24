@@ -9,6 +9,5 @@ std::array<uint8_t, 14> demodulateMessage(const std::vector<double>& magnitudes,
 std::vector<size_t> detectPreambleShape(const std::vector<double>& magnitudes);
 
 std::array<uint8_t, 14> demodulatePhaseCorrected(const std::vector<double>& magnitudes);
-std::vector<double> applyPhaseCorrection_Gentile(const std::vector<double>& magnitudes, size_t preamble_idx, const std::array<uint8_t, 14>& packet);
-std::vector<double> applyPhaseCorrection_dump(const std::vector<double>& magnitudes, size_t preamble_idx, const std::array<uint8_t, 14>& packet);
+std::vector<double> applyPhaseCorrection(const std::vector<double>& magnitudes, size_t preamble_idx, const std::array<uint8_t, 14>& packet);
 

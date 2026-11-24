@@ -43,24 +43,14 @@ int runFile(const std::string& path) {
             crc_total++;
         }
         else {
-            std::vector<double> corrected1 = applyPhaseCorrection_Gentile(magnitudes, p, message);
-            std::vector<double> corrected2 = applyPhaseCorrection_dump(magnitudes, p, message);
+            std::vector<double> corrected_magnitude = applyPhaseCorrection(magnitudes, p, message);
 
-            std::array<uint8_t, 14> corrected_msg1 = demodulatePhaseCorrected(corrected1);
-            std::array<uint8_t, 14> corrected_msg2 = demodulatePhaseCorrected(corrected2);
+            std::array<uint8_t, 14> corrected_msg = demodulatePhaseCorrected(corrected_magnitude);
 
-            if (checkCRC(corrected_msg1, known_icaos)) {
-                std::cout << "Gentile Packet at " << p << ":\t";
-                for (size_t i = 0; i < getBitLength(corrected_msg1) / 8; i++) {
-                    std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(corrected_msg1[i]);
-                }
-                std::cout << std::dec << "\n";
-
-            }
-            if (checkCRC(corrected_msg2, known_icaos)) {
+            if (checkCRC(corrected_msg, known_icaos)) {
                 std::cout << "Dump Packet at " << p << ":\t";
-                for (size_t i = 0; i < getBitLength(corrected_msg2) / 8; i++) {
-                    std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(corrected_msg2[i]);
+                for (size_t i = 0; i < getBitLength(corrected_msg) / 8; i++) {
+                    std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(corrected_msg[i]);
                 }
                 std::cout << std::dec << "\n";
 
